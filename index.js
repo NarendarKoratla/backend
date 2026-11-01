@@ -1,76 +1,109 @@
 const express = require("express");
-// npm init; npm i express; npm i nodemon;
+
 const app = express();
-const port = 4000;
+const port = Number(process.env.PORT) || 4000;
 
-// javascript object notation (JSON)
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 
-// rest api
+// In-memory storage for learning purposes. Records reset when the server restarts.
 let employeeData = [];
 
-// crud operatins (create, read, update, delete)
-app.get("/getEmployees", async (req, res) => {
-    res.status(200).json({
-        message: "Employee data fetched",
-        status: true,
-        data: employeeData
-    });
+function parseEmployeeId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function validEmployeeName(value) {
+  return typeof value === "string" && value.trim().length > 0 && value.trim().length <= 120;
+}
+
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    message: "Employee API is running",
+    endpoints: [
+      "GET /getEmployees",
+      "POST /createEmployee",
+      "PUT /updateEmployee?empId=1",
+      "DELETE /deleteEmployee?empId=1"
+    ]
+  });
 });
 
-// create employee data
-app.post("/createEmployee", async (req, res) => {
-    const data = req.body;
-
-    employeeData.push(data);
-
-    res.json({
-        message: "Created Employee data",
-        status: true,
-        data: data
-    });
+app.get("/getEmployees", (_req, res) => {
+  res.status(200).json({
+    message: "Employee data fetched",
+    status: true,
+    data: employeeData
+  });
 });
 
-app.put("/updateEmployee", async (req, res) => {
-    console.log(req.query);
-    const empId = parseInt(req.query.empId);
-    console.log(empId);
+app.post("/createEmployee", (req, res) => {
+  const { empId, empName } = req.body || {};
+  const id = parseEmployeeId(empId);
 
-    employeeData = employeeData.map((value, index) => {
-        if (value.empId === empId) {
-            return {...value, empName: "Grohith"}
-        }
-
-        return value;
+  if (!id || !validEmployeeName(empName)) {
+    return res.status(400).json({
+      message: "Provide a positive integer empId and a non-empty empName."
     });
+  }
 
-    res.json({
-        message: "Employee data updated",
-        status: true,
-        data: employeeData,
-    });
+  if (employeeData.some(employee => employee.empId === id)) {
+    return res.status(409).json({ message: "An employee with this empId already exists." });
+  }
+
+  const employee = { empId: id, empName: empName.trim() };
+  employeeData.push(employee);
+
+  return res.status(201).json({
+    message: "Employee created",
+    status: true,
+    data: employee
+  });
 });
 
-app.delete("/deleteEmployee", async (req, res) => {
-    const empId = parseInt(req.query.empId);
+app.put("/updateEmployee", (req, res) => {
+  const id = parseEmployeeId(req.query.empId);
+  if (!id) {
+    return res.status(400).json({ message: "Provide a valid positive integer empId query parameter." });
+  }
 
-    employeeData = employeeData.filter(each => {
-        if (each.empId === empId) {
-            return false;
-        }
+  const employee = employeeData.find(item => item.empId === id);
+  if (!employee) {
+    return res.status(404).json({ message: "Employee not found." });
+  }
 
-        return true;
-    });
+  const { empName } = req.body || {};
+  if (!validEmployeeName(empName)) {
+    return res.status(400).json({ message: "Provide a non-empty empName in the request body." });
+  }
 
-    res.json({
-        message: "Employee record deleted",
-        status: true,
-        data: employeeData,
-    });
+  employee.empName = empName.trim();
+  return res.status(200).json({
+    message: "Employee updated",
+    status: true,
+    data: employee
+  });
+});
+
+app.delete("/deleteEmployee", (req, res) => {
+  const id = parseEmployeeId(req.query.empId);
+  if (!id) {
+    return res.status(400).json({ message: "Provide a valid positive integer empId query parameter." });
+  }
+
+  const index = employeeData.findIndex(employee => employee.empId === id);
+  if (index === -1) {
+    return res.status(404).json({ message: "Employee not found." });
+  }
+
+  const [deletedEmployee] = employeeData.splice(index, 1);
+  return res.status(200).json({
+    message: "Employee deleted",
+    status: true,
+    data: deletedEmployee
+  });
 });
 
 app.listen(port, () => {
-    console.log(
-        `Hey we started the server
-         at http://localhost:${port}`);
+  console.log(`Employee API running at http://localhost:${port}`);
 });
