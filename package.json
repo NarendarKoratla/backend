@@ -1,16 +1,19 @@
 {
-  "name": "server",
+  "name": "nodejs-backend-practice",
   "version": "1.0.0",
-  "description": "Hey this is about Nodejs",
+  "description": "A small Node.js and Express backend practice project",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "node --check index.js"
   },
-  "author": "",
+  "author": "Narendar Koratla",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.21.2",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
     "nodemon": "^3.1.9"
   }
 }
